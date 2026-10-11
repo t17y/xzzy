@@ -82,7 +82,7 @@ export function buildReminderMessage(queue) {
   if (fresh) parts.push(`新内容 ${fresh} 项`);
   if (weak) parts.push(`薄弱 ${weak} 项`);
   const body = parts.length ? `${parts.join(" · ")}，点开开始复习 →` : "今天没有到期内容，可以自由练习或新增内容。";
-  return { title: "西综多邻国 · 今日复习", body, empty: parts.length === 0 };
+  return { title: "知彩 · 今日复习", body, empty: parts.length === 0 };
 }
 
 /** 计算当前应提醒的内容（只读） */

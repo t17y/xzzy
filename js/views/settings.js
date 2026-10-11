@@ -218,7 +218,7 @@ export const settingsView = {
       if (v) {
         await scheduleReminder();
         const msg = await currentReminder();
-        await showNotification("西综多邻国 · 提醒已开启", { body: msg.body, tag: "xzzy-test" });
+        await showNotification("知彩 · 提醒已开启", { body: msg.body, tag: "xzzy-test" });
         toast("已开启每日提醒", { type: "ok" });
       } else {
         stopReminder();
@@ -288,7 +288,7 @@ export const settingsView = {
       const action = el.dataset.action;
       if (action === "export-all") {
         const backup = await exportAll();
-        downloadText(`西综多邻国-备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), "application/json;charset=utf-8");
+        downloadText(`知彩-备份-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(backup, null, 2), "application/json;charset=utf-8");
         toast("备份已导出", { type: "ok" });
       }
       if (action === "import-backup") root.querySelector("#backup-input")?.click();
@@ -315,7 +315,7 @@ export const settingsView = {
         const p = await requestPermission();
         if (p !== "granted") return toast("未获得通知权限", { type: "warn" });
         const msg = await currentReminder();
-        const ok = await showNotification("西综多邻国 · 测试通知", {
+        const ok = await showNotification("知彩 · 测试通知", {
           body: msg.empty ? "当前没有到期内容，这是一条测试提醒。" : msg.body,
           tag: "xzzy-test",
         });

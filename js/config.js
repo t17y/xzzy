@@ -4,8 +4,8 @@
  */
 
 export const APP = {
-  name: "西综多邻国",
-  shortName: "西综多邻国",
+  name: "知彩",
+  shortName: "知彩",
   english: "Western Comprehensive Duolingo",
   version: "1.0.0",
   phase: "Phase 5 完成 · 全量功能（骨架 / 导入 / 学习 / 复习 / 沉淀 / 统计与打磨）",

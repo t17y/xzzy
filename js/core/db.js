@@ -508,7 +508,7 @@ export async function exportAll() {
     data[name] = await getAll(name);
   }
   return {
-    app: "西综多邻国",
+    app: "知彩",
     schema: DB_VERSION,
     exported_at: new Date().toISOString(),
     settings: readSettings(),

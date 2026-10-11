@@ -1,9 +1,10 @@
 {
-  "name": "西综多邻国 · 个人备考学习",
-  "short_name": "西综多邻国",
+  "name": "知彩 · 个人备考学习",
+  "short_name": "知彩",
   "description": "个人备考学习 PWA：点线面闯关、艾宾浩斯复习、错题精华卡片。内容全部来自你导入的 Markdown 文件，纯本地离线可用。",
   "lang": "zh-CN",
   "dir": "ltr",
+  "id": "/xzzy/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -37,12 +38,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "./icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "monochrome"
     }
   ],
   "shortcuts": [

@@ -200,7 +200,7 @@ export const reviewView = {
         const p = await requestPermission();
         if (p === "granted") {
           const msg = await currentReminder();
-          await showNotification("西综多邻国 · 通知已开启", { body: msg.body, tag: "xzzy-test" });
+          await showNotification("知彩 · 通知已开启", { body: msg.body, tag: "xzzy-test" });
           const { updateSettings } = await import("../core/state.js");
           updateSettings({ notifyEnabled: true });
           await scheduleReminder();

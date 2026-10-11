@@ -81,7 +81,7 @@ export async function render() {
   const view = $("#view");
   const topbar = $("#topbar");
   show(topbar, config.topbar !== false);
-  setText($("#topbar-title"), config.title || "西综多邻国");
+  setText($("#topbar-title"), config.title || "知彩");
   const backBtn = $("#topbar-back");
   show(backBtn, !!config.back);
 

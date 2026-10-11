@@ -4,7 +4,7 @@
  *
  * 版本策略：修改 CACHE_VERSION 即发布新版本，页面侧会收到更新提示（见 main.js）。
  */
-const CACHE_VERSION = "xzzy-v1.0.0";
+const CACHE_VERSION = "xzzy-v1.1.0";
 const CACHE_NAME = `xzzy-cache-${CACHE_VERSION}`;
 
 /** 应用外壳（离线必需） */
