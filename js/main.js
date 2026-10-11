@@ -10,43 +10,76 @@ import { initState, state } from "./core/state.js";
 import { emit, on, EV } from "./core/events.js";
 import { openDB, migrationLog } from "./core/db.js";
 import { detectEnv, browserAdvice } from "./core/env.js";
-import { installHelp } from "./views/settings.js";
 import { APP, TABS } from "./config.js";
 
-import { homeView } from "./views/home.js";
-import { importView } from "./views/import-view.js";
-import { learnView } from "./views/learn.js";
-import { sessionView } from "./views/session.js";
-import { badgesView } from "./views/badges.js";
-import { reviewView } from "./views/review.js";
-import { reviewSessionView } from "./views/review-session.js";
-import { wrongView } from "./views/wrong.js";
-import { shelfView } from "./views/shelf.js";
-import { readerView } from "./views/reader.js";
-import { cardEditView } from "./views/card-edit.js";
-import { statsView } from "./views/stats.js";
-import { aboutView } from "./views/about.js";
-import { profileView, guideView } from "./views/placeholders.js";
-import { settingsView } from "./views/settings.js";
-
-const ROUTES = [
-  ["/home", homeView],
-  ["/import", importView],
-  ["/learn", learnView],
-  ["/session", sessionView],
-  ["/review", reviewView],
-  ["/review-session", reviewSessionView],
-  ["/badges", badgesView],
-  ["/wrong", wrongView],
-  ["/cards", shelfView],
-  ["/reader", readerView],
-  ["/card-edit", cardEditView],
-  ["/stats", statsView],
-  ["/about", aboutView],
-  ["/profile", profileView],
-  ["/guide", guideView],
-  ["/settings", settingsView],
+/**
+ * 路由表：**按需加载**（性能关键）
+ *
+ * 之前这里用静态 import 把 23 个视图模块全部拉下来，首屏必须等约 20 个网络请求跑完
+ * 才能渲染 —— 在网络较差的环境（如国内访问 GitHub Pages，单请求约 300ms）下会卡十几秒。
+ * 改成动态 import 后，首屏只需加载首页相关的少数模块，其余页面在点进去时才下载。
+ *
+ * 导出仅用于测试（验证每个懒加载路径都能解析出视图）。
+ */
+export const ROUTES = [
+  ["/home", () => import("./views/home.js").then((m) => m.homeView), { eager: true }],
+  // 导入页含整个 Markdown 解析链（约 100 KB），改为点「导入我的内容」时再加载，
+  // 让空状态首屏只需要下载核心框架 + 首页。
+  ["/import", () => import("./views/import-view.js").then((m) => m.importView)],
+  ["/learn", () => import("./views/learn.js").then((m) => m.learnView)],
+  ["/session", () => import("./views/session.js").then((m) => m.sessionView)],
+  ["/review", () => import("./views/review.js").then((m) => m.reviewView)],
+  ["/review-session", () => import("./views/review-session.js").then((m) => m.reviewSessionView)],
+  ["/badges", () => import("./views/badges.js").then((m) => m.badgesView)],
+  ["/wrong", () => import("./views/wrong.js").then((m) => m.wrongView)],
+  ["/cards", () => import("./views/shelf.js").then((m) => m.shelfView)],
+  ["/reader", () => import("./views/reader.js").then((m) => m.readerView)],
+  ["/card-edit", () => import("./views/card-edit.js").then((m) => m.cardEditView)],
+  ["/stats", () => import("./views/stats.js").then((m) => m.statsView)],
+  ["/about", () => import("./views/about.js").then((m) => m.aboutView)],
+  ["/profile", () => import("./views/placeholders.js").then((m) => m.profileView)],
+  ["/guide", () => import("./views/placeholders.js").then((m) => m.guideView)],
+  ["/settings", () => import("./views/settings.js").then((m) => m.settingsView)],
 ];
+
+/** 已加载的视图模块缓存（路径 → Promise<view>） */
+const viewCache = new Map();
+
+/** 把「加载器」包装成路由需要的视图对象 */
+function lazyView(path, loader) {
+  return {
+    title: undefined,
+    async _load() {
+      if (!viewCache.has(path)) {
+        viewCache.set(
+          path,
+          loader().catch((err) => {
+            viewCache.delete(path); // 允许下次重试
+            throw new Error(`页面模块加载失败（${path}）：${err && err.message ? err.message : err}`);
+          })
+        );
+      }
+      return viewCache.get(path);
+    },
+    async render(ctx) {
+      const view = await this._load();
+      return view.render ? view.render(ctx) : "";
+    },
+    async mount(ctx, root) {
+      const view = await this._load();
+      if (typeof view.mount === "function") return view.mount(ctx, root);
+      return undefined;
+    },
+    unmount(...args) {
+      const cached = viewCache.get(path);
+      if (!cached) return;
+      // 已加载完成才调用其 unmount
+      Promise.resolve(cached).then((view) => {
+        if (typeof view.unmount === "function") view.unmount(...args);
+      });
+    },
+  };
+}
 
 /** 为每个视图注入 reload 能力（重新渲染当前路由） */
 function withReload(config) {
@@ -58,6 +91,41 @@ function withReload(config) {
       return undefined;
     },
   };
+}
+
+/** 注册全部路由（懒加载包装） */
+function registerAllRoutes() {
+  registerRoutes(
+    ROUTES.map(([path, loader, opts]) => [
+      path,
+      withReload({
+        ...lazyView(path, loader),
+        // 视图元信息（title/tab/back）在模块加载前不可用，交给模块自己声明；
+        // 这里只保证 unmount 转发与懒加载能力。
+        __lazy: true,
+        eager: !!(opts && opts.eager),
+      }),
+    ])
+  );
+}
+
+/**
+ * 预热：等首屏渲染完、网络空闲时，把其余页面模块提前下载好。
+ * 这样点进「导入 / 关卡 / 复习 / 卡片」时不需要再等网络（对慢网络尤其重要）。
+ * 首屏只加载 /home，其余在这里后台补上。
+ */
+function warmupRoutes() {
+  const run = () => {
+    for (const [path, loader] of ROUTES) {
+      if (path === "/home") continue; // 首屏已经在用
+      loader().catch(() => {
+        /* 预热失败不影响使用，用户点进去时会重试 */
+      });
+    }
+  };
+  // 首页渲染完先让浏览器空闲一下，再开始预热，避免和首屏抢带宽
+  if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 3000 });
+  else setTimeout(run, 1500);
 }
 
 function buildTabbar() {
@@ -195,7 +263,7 @@ async function boot() {
   showBootTip("正在准备界面…");
 
   // 首屏优先：先注册路由与外壳并渲染，数据在后台水合（首屏加载 < 3s，提示词验收）
-  registerRoutes(ROUTES.map(([path, config]) => [path, withReload(config)]));
+  registerAllRoutes();
   buildTabbar();
   bindGlobal();
   bindTheme();
@@ -222,6 +290,9 @@ async function boot() {
       if (path && path !== "/session" && path !== "/review-session" && path !== "/reader") render();
     })
     .catch((err) => console.warn("[boot] 状态初始化失败", err));
+
+  // 网络空闲时预热其余页面模块（慢网络下点进新页面不再等下载）
+  warmupRoutes();
 
   // 启动后的轻量能力提示（提示词 3.5：仅检测失败时提示一次）
   const env = detectEnv();
@@ -319,4 +390,9 @@ function showDbError(err) {
 }
 
 // 调试用：全局暴露少量只读信息
-window.__XZZY__ = { APP, state, migrationLog, installHelp };
+window.__XZZY__ = {
+  APP,
+  state,
+  migrationLog,
+  installHelp: () => import("./views/settings.js").then((m) => m.installHelp()),
+};

@@ -7,13 +7,25 @@
 
 import { state, refreshSummary } from "../core/state.js";
 import { escapeHtml, fmtTime, relTime, truncate } from "../core/util.js";
-import { recentImports } from "../import/pipeline.js";
 import { APP } from "../config.js";
 import { on, EV } from "../core/events.js";
 import { getAll, STORES, readSettings } from "../core/db.js";
-import { todayOverview, rankOf, BADGES } from "../core/game.js";
-import { listMapSummary } from "../core/level.js";
-import { buildQueue, listRecords, ensureRecordsForItems } from "../core/scheduler.js";
+
+/**
+ * 性能说明：首页分成「空状态」和「有内容」两条路径。
+ * 空状态（首次打开最常见的情况）**不需要** game / level / scheduler / pipeline 这些重模块，
+ * 因此它们改为在 contentHtml() 内部按需加载 —— 首屏要下载和解析的脚本随之大幅减少。
+ * 有内容时再加载它们，用户已经进入学习状态，多等一点无感。
+ */
+async function heavyDeps() {
+  const [game, level, scheduler, pipeline] = await Promise.all([
+    import("../core/game.js"),
+    import("../core/level.js"),
+    import("../core/scheduler.js"),
+    import("../import/pipeline.js"),
+  ]);
+  return { game, level, scheduler, pipeline };
+}
 
 export const homeView = {
   title: APP.name,
@@ -78,21 +90,23 @@ function emptyHtml() {
 }
 
 async function contentHtml() {
+  const { game, level, scheduler, pipeline } = await heavyDeps();
+  const { todayOverview, rankOf, BADGES } = game;
   const settings = readSettings();
   const ov = await todayOverview();
   const rank = rankOf(ov.xp);
-  const maps = await listMapSummary({ unlockStars: settings.unlockStars });
+  const maps = await level.listMapSummary({ unlockStars: settings.unlockStars });
   const totalNodes = maps.reduce((n, m) => n + m.total, 0);
   const clearedNodes = maps.reduce((n, m) => n + m.cleared, 0);
   const nextMap = maps.find((m) => m.nextNode);
 
   const items = await getAll(STORES.learn_items);
   // 复习队列（Phase 3）：补齐档案后统计今日到期
-  await ensureRecordsForItems(items);
-  const records = await listRecords();
-  const queue = buildQueue(records, { dailyNewLimit: settings.dailyNewLimit ?? 20 });
+  await scheduler.ensureRecordsForItems(items);
+  const records = await scheduler.listRecords();
+  const queue = scheduler.buildQueue(records, { dailyNewLimit: settings.dailyNewLimit ?? 20 });
   const reviewDue = queue.dueCount + queue.newCount;
-  const imports = await recentImports(3);
+  const imports = await pipeline.recentImports(3);
   const bySubject = new Map();
   for (const it of items) {
     if (!bySubject.has(it.subject)) bySubject.set(it.subject, { items: 0, questions: 0 });
