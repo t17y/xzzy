@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>西综多邻国</title>
+<meta name="description" content="个人备考学习 PWA：点线面闯关、艾宾浩斯复习、错题精华卡片。纯本地离线可用。" />
+<meta name="theme-color" content="#58CC02" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="西综多邻国" />
+<meta name="mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./icons/icon-192.png" />
+<link rel="stylesheet" href="./css/app.css" />
+<script>
+  // 首屏防闪烁：在样式生效前应用主题 / 字号 / 动效（与 core/state.js 使用同一存储键）
+  (function () {
+    try {
+      var s = JSON.parse(localStorage.getItem("xzzy.settings.v1") || "{}") || {};
+      var r = document.documentElement;
+      r.dataset.theme = s.theme || "auto";
+      r.dataset.fontsize = s.fontSize || "medium";
+      r.dataset.anim = s.anim === false ? "off" : "on";
+    } catch (e) {
+      /* 读取失败时使用样式表默认值 */
+    }
+  })();
+</script>
+</head>
+<body>
+<!-- 启动闪屏（脚本就绪后移除） -->
+<div id="boot" class="boot">
+  <div class="boot-logo">🩺</div>
+  <div class="boot-name">西综多邻国</div>
+  <div class="boot-tip">正在准备本地数据…</div>
+</div>
+
+<!-- 顶部栏 -->
+<header class="topbar" id="topbar" hidden>
+  <button class="topbar-btn" id="topbar-back" type="button" aria-label="返回" hidden>‹</button>
+  <h1 class="topbar-title" id="topbar-title">西综多邻国</h1>
+  <div class="topbar-actions" id="topbar-actions"></div>
+</header>
+
+<!-- 页面容器 -->
+<main id="view" class="view" tabindex="-1"></main>
+
+<!-- 底部 Tab -->
+<nav class="tabbar" id="tabbar" hidden aria-label="主导航"></nav>
+
+<!-- 全局浮层 -->
+<div id="toast-layer" class="toast-layer" aria-live="polite"></div>
+<div id="modal-layer" class="modal-layer" hidden></div>
+<div id="sheet-layer" class="sheet-layer" hidden></div>
+
+<noscript>
+  <div class="noscript">本应用需要启用 JavaScript 才能运行。</div>
+</noscript>
+
+<script type="module" src="./js/main.js"></script>
+</body>
+</html>
